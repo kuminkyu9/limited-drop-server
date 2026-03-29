@@ -5,36 +5,42 @@ import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
-
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "refresh_tokens")
-@Getter
-@Setter
+@Table(name = "products")
+@Getter @Setter
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @EntityListeners(AuditingEntityListener.class)
-public class RefreshToken {
+public class Product {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // refresh_tokens.user_id -> users.id
+    // ERD의 seller_id (User와의 1:N 관계)
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    @JoinColumn(name = "seller_id", nullable = false)
+    private User seller;
 
-    @Column(nullable = false, unique = true, length = 512)
-    private String token;
-
-    @Column(name = "expiry_at", nullable = false)
-    private LocalDateTime expiryAt;
+    // ERD의 상품 타입: GENERAL(일반), FCFS(선착순), RAFFLE(응모)
+    @Enumerated(EnumType.STRING)
+    @Column(name = "product_type", nullable = false)
+    private ProductType productType;
 
     @Column(nullable = false)
-    private Boolean revoked;
+    private String brand;
+
+    @Column(nullable = false)
+    private String name;
+
+    @Column(nullable = false)
+    private Integer price;
+
+    @Column(nullable = false, columnDefinition = "TEXT")
+    private String description;
 
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)

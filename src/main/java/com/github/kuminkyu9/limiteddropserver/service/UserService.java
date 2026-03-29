@@ -1,67 +1,70 @@
 package com.github.kuminkyu9.limiteddropserver.service;
 
-import com.github.kuminkyu9.limiteddropserver.config.JwtProvider;
-import com.github.kuminkyu9.limiteddropserver.entity.RefreshToken;
+import com.github.kuminkyu9.limiteddropserver.config.JwtTokenProvider;
+import com.github.kuminkyu9.limiteddropserver.dto.auth.LoginResponse;
 import com.github.kuminkyu9.limiteddropserver.entity.User;
-import com.github.kuminkyu9.limiteddropserver.repository.RefreshTokenRepository;
 import com.github.kuminkyu9.limiteddropserver.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Date;
 
 @Service
-@RequiredArgsConstructor // Repository를 자동으로 연결(주입)
+@RequiredArgsConstructor
 public class UserService {
 
     private final UserRepository userRepository;
-    private final RefreshTokenRepository refreshTokenRepository;
-    private final JwtProvider jwtProvider;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtTokenProvider jwtTokenProvider;
+    private final RefreshTokenService refreshTokenService;
 
-    // 회원가입
-    @Transactional // 데이터 저장 중 에러시 Rollback
+    @Transactional
     public Long signup(User user) {
-        // 1. 중복 회원 검증 (이미 가입된 이메일인지 확인)
         if (userRepository.findByEmail(user.getEmail()).isPresent()) {
             throw new IllegalArgumentException("이미 가입된 이메일입니다.");
         }
 
-        // 2. DB에 저장
+        if (user.getRole() == null) {
+            throw new IllegalArgumentException("회원 유형은 CUSTOMER 또는 SELLER 중 하나여야 합니다.");
+        }
+
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
         userRepository.save(user);
 
         return user.getId();
     }
 
-    private void validateDuplicateUser(User user) {
-        userRepository.findByEmail(user.getEmail()).ifPresent(m -> {
-            throw new IllegalStateException("이미 존재하는 회원입니다.");
-        });
-    }
-
-    // 로그인
     @Transactional
-    public String[] login(String email, String password) {
-        // 1. 유저 확인
+    public LoginResponse login(String email, String password) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("가입되지 않은 이메일입니다."));
 
-        // 2. 비밀번호 확인 (나중에 암호화 적용 예정!)
-        if (!user.getPassword().equals(password)) {
+        if (!passwordEncoder.matches(password, user.getPassword())) {
             throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
         }
 
-        // 3. 토큰 생성
-        String accessToken = jwtProvider.createAccessToken(user.getEmail());
-        String refreshToken = jwtProvider.createRefreshToken(user.getEmail());
+        String accessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getEmail());
+        String refreshToken = jwtTokenProvider.createRefreshToken(user.getId(), user.getEmail());
 
-        // 4. 7일 뒤 만료 설정
-        LocalDateTime expiryDate = LocalDateTime.now().plusDays(7);
+        Date refreshTokenExpiration = jwtTokenProvider.getExpiration(refreshToken);
+        LocalDateTime expiryAt = Instant.ofEpochMilli(refreshTokenExpiration.getTime())
+                .atZone(ZoneId.systemDefault())
+                .toLocalDateTime();
 
-        // 5. Refresh Token DB 저장 (기존 토큰 삭제 후 저장하면 더 깔끔)
-        refreshTokenRepository.deleteByUser(user);
-        refreshTokenRepository.save(new RefreshToken(refreshToken, user, expiryDate));
+        refreshTokenService.saveRefreshToken(user, refreshToken, expiryAt);
 
-        return new String[]{accessToken, refreshToken};
+        return new LoginResponse(
+                user.getId(),
+                user.getEmail(),
+                user.getName(),
+                user.getRole(),
+                accessToken,
+                refreshToken
+        );
     }
 }

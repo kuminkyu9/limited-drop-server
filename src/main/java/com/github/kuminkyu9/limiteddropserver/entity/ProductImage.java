@@ -3,44 +3,39 @@ package com.github.kuminkyu9.limiteddropserver.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "refresh_tokens")
+@Table(name = "product_images")
 @Getter
 @Setter
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @EntityListeners(AuditingEntityListener.class)
-public class RefreshToken {
+public class ProductImage {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // refresh_tokens.user_id -> users.id
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    @JoinColumn(name = "product_id", nullable = false)
+    private Product product;
 
-    @Column(nullable = false, unique = true, length = 512)
-    private String token;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "image_type", nullable = false)
+    private ProductImageType imageType;
 
-    @Column(name = "expiry_at", nullable = false)
-    private LocalDateTime expiryAt;
+    @Column(name = "image_url", nullable = false, length = 1000)
+    private String imageUrl;
 
-    @Column(nullable = false)
-    private Boolean revoked;
+    @Column(name = "sort_order", nullable = false)
+    private Integer sortOrder;
 
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
-
-    @LastModifiedDate
-    @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
 }

@@ -9,32 +9,39 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "refresh_tokens")
+@Table(name = "fcfs_products")
 @Getter
 @Setter
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @EntityListeners(AuditingEntityListener.class)
-public class RefreshToken {
+public class FcfsProduct {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "product_id")
     private Long id;
 
-    // refresh_tokens.user_id -> users.id
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    @OneToOne(fetch = FetchType.LAZY)
+    @MapsId
+    @JoinColumn(name = "product_id", nullable = false)
+    private Product product;
 
-    @Column(nullable = false, unique = true, length = 512)
-    private String token;
+    @Column(name = "start_at", nullable = false)
+    private LocalDateTime startAt;
 
-    @Column(name = "expiry_at", nullable = false)
-    private LocalDateTime expiryAt;
+    @Column(name = "end_at")
+    private LocalDateTime endAt;
 
-    @Column(nullable = false)
-    private Boolean revoked;
+    @Column(name = "total_stock", nullable = false)
+    private Integer totalStock;
+
+    @Column(name = "sold_quantity", nullable = false)
+    private Integer soldQuantity;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "sale_status", nullable = false)
+    private FcfsSaleStatus saleStatus;
 
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)

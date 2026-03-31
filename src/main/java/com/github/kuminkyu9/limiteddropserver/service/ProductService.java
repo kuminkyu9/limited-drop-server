@@ -8,12 +8,11 @@ import com.github.kuminkyu9.limiteddropserver.dto.product.ProductImageResponse;
 import com.github.kuminkyu9.limiteddropserver.dto.product.FcfsProductCreateRequest;
 import com.github.kuminkyu9.limiteddropserver.dto.product.FcfsProductDetailResponse;
 import com.github.kuminkyu9.limiteddropserver.dto.product.FcfsProductListResponse;
-
 import com.github.kuminkyu9.limiteddropserver.dto.product.RaffleProductCreateRequest;
 import com.github.kuminkyu9.limiteddropserver.dto.product.RaffleDetailRequest;
 import com.github.kuminkyu9.limiteddropserver.dto.product.RaffleProductDetailResponse;
 import com.github.kuminkyu9.limiteddropserver.dto.product.RaffleProductListResponse;
-
+import com.github.kuminkyu9.limiteddropserver.dto.product.RaffleEntryCreateRequest;
 import com.github.kuminkyu9.limiteddropserver.entity.*;
 import com.github.kuminkyu9.limiteddropserver.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -297,5 +296,51 @@ public class ProductService {
                 options,
                 images
         );
+    }
+
+    // 추첨 상품 응모 관련
+    private final RaffleEntryRepository raffleEntryRepository;
+
+    public Long createRaffleEntry(Long productId, RaffleEntryCreateRequest request, Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+
+        if (user.getRole() != UserRole.CUSTOMER) {
+            throw new IllegalArgumentException("고객만 추첨 응모가 가능합니다.");
+        }
+
+        RaffleProduct raffleProduct = raffleProductRepository.findById(productId)
+                .orElseThrow(() -> new IllegalArgumentException("추첨 상품을 찾을 수 없습니다."));
+
+        if (raffleProduct.getRaffleStatus() != RaffleStatus.OPEN) {
+            throw new IllegalArgumentException("현재 응모 가능한 상태의 상품이 아닙니다.");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        if (now.isBefore(raffleProduct.getStartAt()) || now.isAfter(raffleProduct.getEndAt())) {
+            throw new IllegalArgumentException("현재 응모 가능한 시간이 아닙니다.");
+        }
+
+        ProductOption option = productOptionRepository.findById(request.getProductOptionId())
+                .orElseThrow(() -> new IllegalArgumentException("상품 옵션을 찾을 수 없습니다."));
+
+        if (!option.getProduct().getId().equals(productId)) {
+            throw new IllegalArgumentException("해당 추첨 상품의 옵션이 아닙니다.");
+        }
+
+        if (raffleEntryRepository.existsByUser_IdAndRaffleProduct_Id(userId, productId)) {
+            throw new IllegalArgumentException("이미 응모한 상품입니다.");
+        }
+
+        RaffleEntry raffleEntry = RaffleEntry.builder()
+                .user(user)
+                .raffleProduct(raffleProduct)
+                .productOption(option)
+                .status(RaffleEntryStatus.APPLIED)
+                .selectedAt(null)
+                .build();
+
+        RaffleEntry savedEntry = raffleEntryRepository.save(raffleEntry);
+        return savedEntry.getId();
     }
 }

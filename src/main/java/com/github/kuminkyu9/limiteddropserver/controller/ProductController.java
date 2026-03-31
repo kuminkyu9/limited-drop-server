@@ -7,6 +7,7 @@ import com.github.kuminkyu9.limiteddropserver.dto.product.FcfsProductCreateReque
 import com.github.kuminkyu9.limiteddropserver.dto.product.RaffleProductCreateRequest;
 import com.github.kuminkyu9.limiteddropserver.dto.product.RaffleProductDetailResponse;
 import com.github.kuminkyu9.limiteddropserver.dto.product.RaffleProductListResponse;
+import com.github.kuminkyu9.limiteddropserver.dto.product.RaffleEntryCreateRequest;
 import com.github.kuminkyu9.limiteddropserver.service.ProductService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -30,9 +31,8 @@ public class ProductController {
     @PostMapping("/register")
     public ResponseEntity<Long> createProduct(
             @Valid @RequestBody ProductCreateRequest request,
-            Authentication authentication
+            @AuthenticationPrincipal AuthUser authUser
     ) {
-        AuthUser authUser = (AuthUser) authentication.getPrincipal();
         Long productId = productService.createProduct(request, authUser.getUserId());
         return ResponseEntity.status(HttpStatus.CREATED).body(productId);
     }
@@ -41,9 +41,8 @@ public class ProductController {
     @PostMapping("/fcfs")
     public ResponseEntity<Long> createFcfsProduct(
             @Valid @RequestBody FcfsProductCreateRequest request,
-            Authentication authentication
+            @AuthenticationPrincipal AuthUser authUser
     ) {
-        AuthUser authUser = (AuthUser) authentication.getPrincipal();
         Long productId = productService.createFcfsProduct(request, authUser.getUserId());
         return ResponseEntity.status(HttpStatus.CREATED).body(productId);
     }
@@ -86,5 +85,16 @@ public class ProductController {
     @GetMapping("/raffle/{productId}")
     public ResponseEntity<RaffleProductDetailResponse> getRaffleProductDetail(@PathVariable Long productId) {
         return ResponseEntity.ok(productService.getRaffleProductDetail(productId));
+    }
+
+    // 추첨 상품 응모
+    @PostMapping("/raffle/{productId}/entries")
+    public ResponseEntity<Long> createRaffleEntry(
+            @PathVariable Long productId,
+            @Valid @RequestBody RaffleEntryCreateRequest request,
+            @AuthenticationPrincipal AuthUser authUser
+    ) {
+        Long entryId = productService.createRaffleEntry(productId, request, authUser.getUserId());
+        return ResponseEntity.status(HttpStatus.CREATED).body(entryId);
     }
 }

@@ -43,6 +43,9 @@ public class RaffleProduct {
     @Column(name = "raffle_status", nullable = false)
     private RaffleStatus raffleStatus;
 
+    @Column(name = "draw_completed", nullable = false)
+    private boolean drawCompleted;
+
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -50,4 +53,12 @@ public class RaffleProduct {
     @LastModifiedDate
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+
+    public void updateRaffleStatus(RaffleStatus raffleStatus) {
+        this.raffleStatus = raffleStatus;
+    }
+
+    public void markDrawCompleted() {
+        this.drawCompleted = true;
+    }
 }

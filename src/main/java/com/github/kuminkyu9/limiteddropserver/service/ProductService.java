@@ -225,6 +225,7 @@ public class ProductService {
                         request.getRaffleDetail().getStartAt(),
                         request.getRaffleDetail().getEndAt()
                 ))
+                .drawCompleted(false)
                 .build();
 
         raffleProductRepository.save(raffleProduct);
@@ -312,11 +313,12 @@ public class ProductService {
         RaffleProduct raffleProduct = raffleProductRepository.findById(productId)
                 .orElseThrow(() -> new IllegalArgumentException("추첨 상품을 찾을 수 없습니다."));
 
-        if (raffleProduct.getRaffleStatus() != RaffleStatus.OPEN) {
-            throw new IllegalArgumentException("현재 응모 가능한 상태의 상품이 아닙니다.");
+        LocalDateTime now = LocalDateTime.now();
+
+        if (raffleProduct.isDrawCompleted()) {
+            throw new IllegalArgumentException("이미 추첨이 완료된 상품입니다.");
         }
 
-        LocalDateTime now = LocalDateTime.now();
         if (now.isBefore(raffleProduct.getStartAt()) || now.isAfter(raffleProduct.getEndAt())) {
             throw new IllegalArgumentException("현재 응모 가능한 시간이 아닙니다.");
         }
@@ -329,7 +331,7 @@ public class ProductService {
         }
 
         if (raffleEntryRepository.existsByUser_IdAndRaffleProduct_Id(userId, productId)) {
-            throw new IllegalArgumentException("이미 응모한 상품입니다.");
+            throw new IllegalArgumentException("이미 이 상품에 응모했습니다.");
         }
 
         RaffleEntry raffleEntry = RaffleEntry.builder()

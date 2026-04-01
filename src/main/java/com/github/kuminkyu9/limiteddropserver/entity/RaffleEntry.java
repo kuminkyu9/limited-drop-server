@@ -44,4 +44,14 @@ public class RaffleEntry {
 
     @Column(name = "selected_at")
     private LocalDateTime selectedAt;
+
+    public void markWon(LocalDateTime selectedAt) {
+        this.status = RaffleEntryStatus.WON;
+        this.selectedAt = selectedAt;
+    }
+
+    public void markLost(LocalDateTime selectedAt) {
+        this.status = RaffleEntryStatus.LOST;
+        this.selectedAt = selectedAt;
+    }
 }
